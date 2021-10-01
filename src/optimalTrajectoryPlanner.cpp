@@ -1,12 +1,14 @@
 #include <optimalTrajectoryPlanner.hpp>
 
 OptimalTrajectoryPlanner::OptimalTrajectoryPlanner() {
+	minimumTurningRadius_ = wheelBase_/tan(maxSteeringAngle_)
+	maxCurvature_ = 1/minimumTurningRadius_;
 }
 
 OptimalTrajectoryPlanner::~OptimalTrajectoryPlanner() {
 }
 
-std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, double da0,
+FrenetPath OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, double da0,
 												 double s0, double sv0, double sa0,
 												 std::vector<std::vector<double>> &obstacles){
 	// To store all possible tranectories in TNB/Frenet Frame
@@ -62,7 +64,19 @@ std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(dou
 	// Convert Trajectories from Frenet Frame to Global/World Frame
 	convertToWorldFrame(paths);
 
+	// check if trajectories are valid based on kinodynamic constraints and collisions
+	std::vector<FrenetPath> validPaths;
+	validPaths = isValid(paths);
 
+	// Find the optimal trajectory out of all valid paths based on cost
+	FrenetPath optimalTrajectory;
+	double cost = INT_MAX;
+	for(FrenetPath path:paths){
+		if(cost >= path.cf){
+			cost = path.cf
+			optimalTrajectory = path;
+		}
+	}
 
 	return optimalTrajectory;
 }
@@ -70,10 +84,16 @@ std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(dou
 void OptimalTrajectoryPlanner::trajectoryCost(FrenetPath &path){
 	cd = path.jd*kj_ + path.T*kt_ + std::pow(path.d.back()[0], 2)*ks_;
 	cv = path.js*kj_ + path.T*kt_ + std::pow(path.s.front()[0]-path.s.back()[0],2)*ks_;
-	path.cf = kLat_*cd + kLon_*cv;
+	path.cf = klat_*cd + klon_*cv;
 }
 
-bool OptimalTrajectoryPlanner::isColliding(FrenetPath &path){
+bool OptimalTrajectoryPlanner::isColliding(FrenetPath &path, std::vector<std::vector<double>> &obstacles){
+	for(int i = 0; i<path.world.size(); i++){
+		for(int j = 0; j<obstacles.size(); j++){
+			if(std::sqrt(std::pow(path.world[i][0]-obstacles[j][0],2)+std::pow(path.world[i][1]-obstacles[j][1],2)) > robotFootprint_ + 1)
+				return true;
+		}
+	}
 	return false;
 }
 
@@ -86,8 +106,8 @@ void OptimalTrajectoryPlanner::isWithinKinematicConstraints(FrenetPath &path){
 
 std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath> paths){
 	std::vector<FrenetPath> validPaths;
-	for(){
-		if (!isColliding(path) && !isWithinKinematicConstraints(path)){
+	for(FrenetPath path:paths){
+		if (!isColliding(path, obstacles) && !isWithinKinematicConstraints(path)){
 			validPaths.push_back(path)
 		}
 	}
@@ -114,7 +134,7 @@ void OptimalTrajectoryPlanner::run(){
 	}
 
 	// Obstacles along the lane
-	std::std::vector<std::vector<double>> obstacles = {{10.58,43}, {10.58,45}, {20,38}, {60,43.93}, {40,42.5}};
+	std::vector<std::vector<double>> obstacles = {{10.58,43}, {10.58,45}, {20,38}, {60,43.93}, {40,42.5}};
 
 	// Run Trajectory Planner till the end of perceived/available Lane data
 	while(std::sqrt(std::pow(centerLane.back()[0]-x,2)+std::pow(centerLane.back()[1]-y,2))<1){

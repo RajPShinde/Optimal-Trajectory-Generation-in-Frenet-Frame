@@ -18,7 +18,15 @@ class OptimalTrajectoryPlanner
 
         bool isColliding();
 
-        std::vector<std::vector<double>> optimalPath();
+        FrenetPath optimalPath();
+
+        void trajectoryCost(FrenetPath &path);
+
+        bool isColliding(FrenetPath &path, std::vector<std::vector<double>> &obstacles);
+
+        void isWithinKinematicConstraints(FrenetPath &path);
+
+        std::vector<FrenetPath> isValid(std::vector<FrenetPath> paths);
 
         void run();
 
@@ -36,7 +44,7 @@ class OptimalTrajectoryPlanner
         double laneWidth_;
         double timeStep_ = 0.1;
         double roadWidth_ = 10;
-        int KLat_, KLon_, kj_, kt_, ks_;
+        int klat_, klon_, kj_, kt_, ks_;
 };
 
 #endif  //  INCLUDE_OPTIMALTRAJECTORYPLANNER_HPP_
