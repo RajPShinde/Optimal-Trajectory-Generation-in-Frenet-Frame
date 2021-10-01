@@ -26,7 +26,9 @@ class OptimalTrajectoryPlanner
 
         void isWithinKinematicConstraints(FrenetPath &path);
 
-        std::vector<FrenetPath> isValid(std::vector<FrenetPath> paths);
+        std::vector<FrenetPath> isValid(std::vector<FrenetPath> &paths);
+
+        void convertToWorldFrame(std::vector<FrenetPath> &paths);
 
         void run();
 
@@ -45,6 +47,7 @@ class OptimalTrajectoryPlanner
         double timeStep_ = 0.1;
         double roadWidth_ = 10;
         int klat_, klon_, kj_, kt_, ks_;
+        int distanceTracedIndex_ = 0;
 };
 
 #endif  //  INCLUDE_OPTIMALTRAJECTORYPLANNER_HPP_

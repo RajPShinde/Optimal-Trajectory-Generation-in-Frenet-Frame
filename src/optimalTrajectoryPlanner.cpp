@@ -104,7 +104,7 @@ void OptimalTrajectoryPlanner::isWithinKinematicConstraints(FrenetPath &path){
 	return false;
 }
 
-std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath> paths){
+std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath> &paths){
 	std::vector<FrenetPath> validPaths;
 	for(FrenetPath path:paths){
 		if (!isColliding(path, obstacles) && !isWithinKinematicConstraints(path)){
@@ -114,15 +114,55 @@ std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath
 	return validPaths;
 }
 
+void OptimalTrajectoryPlanner::convertToWorldFrame(std::vector<FrenetPath> &paths){
+	for(FrenetPath path:paths){
+
+		// Calculate x, y in world frame
+		for(int i =0 i<path.s.size(); i++){
+			double x, y, yaw;
+			for(int j=distanceTracedIndex_; j<centerLane.size(); j++){
+				if(std::abs(path.s[i][0]-centerLane[j][0])<=0.1){
+					distanceTracedIndex_ = j;
+					x = centerLane[j][0];
+					y = centerLane[j][1];
+					yaw = centerLane[j][2];
+				}
+			}
+			double d = path.d[i][0];
+			path.world.push_back({x + d * std::cos(yaw + 1.57), y + d * std::sin(yaw + 1.57), 0, 0});
+		}
+
+		// Calculate Yaw in world Frame
+		for(int i =0 i<path.world.size(); i++){
+			path.world[i][2] = std::atan2((path.world[i+1][1]-path.world[i][1])/(path.world[i+1][0]-path.world[i][0])); 
+			path.world[i][3] = std::sqrt(std::pow(path.world[i+1][0]-path.world[i][0],2)+std::pow(path.world[i+1][1]-path.world[i][1],2)); 
+		}
+		path.world[path.size()-1][2]= path.world[path.size()-2][2];
+		path.world[path.size()-1][3]= path.world[path.size()-2][3];
+
+		// Calculate maximum curvature for the trajectory
+		double curvature = INT_MIN;
+		for(int i =0 i<path.world.size(); i++){
+			double tempCurvature = abs((path.world[i+1][2]-path.world[i][2])/(path.world[i][3]));
+			if(curvature<tempCurvature)
+				curvature=tempCurvature
+		}
+		path.maxCurvature=curvature;
+	}
+}
+
 void OptimalTrajectoryPlanner::run(){
 
 	// Center Lane
 	std::vector<std::vector<double>> centerLane;
+	double a = 0.05;
+	double b = 3.5;
+	double c = 2;
+	double distanceTraced =0;
+	double prevX=0;
+	double prevY=4*(sin(std::pow((x*a-b),2) + (x*a-b) + c) + 10);
 	for(int x{0}, x<100; x = x + 0.05){
 		// Arbitary function describing a lane
-		double a = 0.05;
-		double b = 3.5;
-		double c = 2;
 		double y = 4*(sin(std::pow((x*a-b),2) + (x*a-b) + c) + 10);
 		double dy = 4*cos(std::pow((x*a-b),2) + (x*a-b) + c)*(((2*a)*(x*a-b))+a);
 		double ddy = 4((-1*sin(std::pow((x*a-b),2) + (x*a-b) + c)*(std::pow((((2*a)*(x*a-b))+a),2))) +
@@ -130,18 +170,27 @@ void OptimalTrajectoryPlanner::run(){
 		
 		double curvature = std::abs(ddy)/std::sqrt(std::pow((1+(dy*dy)),3));
 		double yaw = dy;
-		centerLane.push_back({x, y, yaw, curvature});
+		distanceTraced = std::sqrt(std::pow(x-prevX,2)+std::pow(y-prevY,2));
+		centerLane.push_back({x, y, yaw, curvature, distanceTraced});
+		prevX = x;
+		prevY = y;
 	}
 
 	// Obstacles along the lane
 	std::vector<std::vector<double>> obstacles = {{10.58,43}, {10.58,45}, {20,38}, {60,43.93}, {40,42.5}};
-
+	double d0 = laneWidth_, dv0 = 0, da0=0;
+	double s0 = 0, sv0 = 15;
 	// Run Trajectory Planner till the end of perceived/available Lane data
 	while(std::sqrt(std::pow(centerLane.back()[0]-x,2)+std::pow(centerLane.back()[1]-y,2))<1){
 		
 		// Get optimal Trajectory
-		optimalTrajectory(d0, dv0, da0, s0, sv0)
-
+		Frenetpath p = optimalTrajectory(d0, dv0, da0, s0, sv0)
+		d0=p.d.back()[0];
+		dv0=p.d.back()[1];
+		da0=p.d.back()[2];
+		s0=p.s.back()[0];
+		sv0=p.s.back()[1];
+		
 		// visualize
 		// Lane
 		for(int i{0}; i<centerLane.size(); i++){
