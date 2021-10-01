@@ -8,8 +8,8 @@
 class FrenetPath
 {
     public:
-        std::vector<std::vector<double>> s;       // Longitudional Data
-        std::vector<std::vector<double>> d;       // Latitudional Data
+        std::vector<std::vector<std::vector<double>>> s;       // Longitudional Data
+        std::vector<std::vector<std::vector<double>>> d;       // Latitudional Data
         double T;                                 // Prediction Time
         double cd, ct, cv;                        // Cost's
         int KLat, KLon, kj, kt, ks;               // Gains

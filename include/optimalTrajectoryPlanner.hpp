@@ -18,7 +18,7 @@ class OptimalTrajectoryPlanner
 
         bool isColliding();
 
-        void optimalPath();
+        std::vector<std::vector<double>> optimalPath();
 
         void run();
 
@@ -31,6 +31,7 @@ class OptimalTrajectoryPlanner
         double maxPredictionStep;
         double minPredictionStep;
         double noOfLanes;
+        double laneWidth;
         double timeStep = 0.1;
         double roadWidth = 10;
 };
