@@ -1,2 +1,6 @@
 # Optimap-Trajectory-Generation-in-Frenet-Frame
-Optimap Trajectory Generation in Frenet Frame for Motion Planning
+Optimal Trajectory Generation in Frenet Frame for Motion Planning
+
+## Dependencies
+1. OpenCV
+2. Eigen
