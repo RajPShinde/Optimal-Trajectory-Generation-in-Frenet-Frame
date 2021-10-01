@@ -64,10 +64,10 @@ class OptimalTrajectoryPlanner
         double klon_ = 1;
         double kjd_ = 0.1;
         double ktd_ = 0.1;
-        double ksd_ = 0.7;
+        double ksd_ = 2;
         double kjs_ = 0.1;
         double kts_ = 0.1;
-        double kss_ = 1;
+        double kss_ = 2;
 };
 
 #endif  //  INCLUDE_OPTIMALTRAJECTORYPLANNER_HPP_

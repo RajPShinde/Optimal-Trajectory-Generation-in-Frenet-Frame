@@ -93,7 +93,7 @@ void OptimalTrajectoryPlanner::trajectoryCost(FrenetPath &path){
 bool OptimalTrajectoryPlanner::isColliding(FrenetPath &path, std::vector<std::vector<double>> &obstacles){
 	for(int i = 0; i<path.world.size(); i++){
 		for(int j = 0; j<obstacles.size(); j++){
-			if(std::sqrt(std::pow(path.world[i][0]-obstacles[j][0],2)+std::pow(path.world[i][1]-obstacles[j][1],2)) <= 1)
+			if(std::sqrt(std::pow(path.world[i][0]-obstacles[j][0],2)+std::pow(path.world[i][1]-obstacles[j][1],2)) <= 3)
 				// std::cout<<"Is Colliding\n";
 				return true;
 		}
@@ -183,7 +183,7 @@ void OptimalTrajectoryPlanner::run(){
 	double distanceTraced =0;
 	double prevX=0;
 	double prevY=4*(sin(std::pow((prevX*a-b),2) + (prevX*a-b) + c) + 1);
-	for(double x{0}; x<100; x = x + 0.01){
+	for(double x{0}; x<140; x = x + 0.01){
 		// Arbitary function describing a lane
 		double y = 4*(sin(std::pow((x*a-b),2) + (x*a-b) + c) + 1);
 		double dy = 4*cos(std::pow((x*a-b),2) + (x*a-b) + c)*(((2*a)*(x*a-b))+a);
@@ -200,7 +200,7 @@ void OptimalTrajectoryPlanner::run(){
 	cv::namedWindow("Optimal Trajectory Planner", cv::WINDOW_NORMAL);
 
 	// Obstacles along the lane
-	std::vector<std::vector<double>> obstacles = {{10.58,13}, {10.58,8},{60,7.93},{25.57,0}};
+	std::vector<std::vector<double>> obstacles = {{10.58, 12,}, {60, 7.93}, {25.57, 0}, {94.42,-4}};
 	double d0 = -laneWidth_; 
 	double dv0 = 0;
 	double da0 = 0;
@@ -222,7 +222,7 @@ void OptimalTrajectoryPlanner::run(){
 		y = p.world[1][1];
 
 		// Stop planner when within goal threshold
-		if(std::sqrt(std::pow(centerLane[centerLane.size()-1][0]-x,2)+std::pow(centerLane[centerLane.size()-1][1]-y,2))<2)
+		if(std::sqrt(std::pow(centerLane[10000][0]-x,2)+std::pow(centerLane[10000][1]-y,2))<=1)
 			break;	
 
 		// visualize
@@ -235,7 +235,7 @@ void OptimalTrajectoryPlanner::run(){
 
 		// Obstacles
 		for(int i{0}; i<obstacles.size(); i++){
-			cv::circle(lane, windowOffset(obstacles[i][0], obstacles[i][1], lane.cols, lane.rows), 20, cv::Scalar(255, 0, 0), 10);
+			cv::circle(lane, windowOffset(obstacles[i][0], obstacles[i][1], lane.cols, lane.rows), 40, cv::Scalar(255, 0, 0), 60);
 		}
 
 		// Robot
