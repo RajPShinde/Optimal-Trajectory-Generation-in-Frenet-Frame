@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <polynomial.hpp>
+#include <frenetPath.hpp>
 
 class OptimalTrajectoryPlanner
 {
@@ -25,7 +27,10 @@ class OptimalTrajectoryPlanner
         double maxSpeed;
         double maxAcceleration;
         double robotFootprint = 2;
-        double predictionStep;
+        double maxSteeringAngle;
+        double maxPredictionStep;
+        double minPredictionStep;
+        double noOfLanes;
         double timeStep = 0.1;
         double roadWidth = 10;
 };
