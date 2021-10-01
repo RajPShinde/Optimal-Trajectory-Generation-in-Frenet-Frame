@@ -17,16 +17,16 @@ class Polynomial
 
         ~Polynomial();
 
-        double position();
+        double position(double t);
 
-        double velocity();
+        double velocity(double t);
 
-        double acceleration();
+        double acceleration(double t);
 
-        double jerk();
+        double jerk(double t);
 
     private:
-        double a0_, a1_, a2_, a3_, a4_, a5_;
+        double a1_, a2_, a3_, a4_, a5_, a6_;
         double x0_, v0_, a0_, xT_, vT_, aT_, T_;
         std::string type_;
 

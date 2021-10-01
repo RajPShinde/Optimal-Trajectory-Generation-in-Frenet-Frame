@@ -9,8 +9,9 @@ OptimalTrajectoryPlanner::~OptimalTrajectoryPlanner() {
 }
 
 FrenetPath OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, double da0,
-												 double s0, double sv0, double sa0,
-												 std::vector<std::vector<double>> &obstacles){
+												 	   double s0, double sv0,
+												 	   std::vector<std::vector<double>> &centerLane,
+												 	   std::vector<std::vector<double>> &obstacles){
 	// To store all possible tranectories in TNB/Frenet Frame
 	std::vector<FrenetPath> paths;
 
@@ -26,8 +27,8 @@ FrenetPath OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, do
 			double jd = 0;
 			// Generate Latitudional Trajectory for a given T and lane
 			for(double t=0; t<=T; t=t+0.1){
-				std::vector<double> data= {t, quintic.position(t), quintic.velocity(t), quintic.acceleration(t), quintic.jerk()};
-				jd += std::pow(data[4]);
+				std::vector<double> data= {quintic.position(t), quintic.velocity(t), quintic.acceleration(t), quintic.jerk(), t};
+				jd += std::pow(data[3],2);
 				latitudionalTrajectory.push_back(data);
 			}
 
@@ -35,22 +36,22 @@ FrenetPath OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, do
 			for(){
 				FrenetPath path;
 				path.T = T;
-				path.d.push_back(latitudionalTrajectory);
+				path.d = latitudionalTrajectory;
 				path.jd = jd;
 				std::vector<std::vector<double>> longitudionalTrajectory;
-				Polynomial quartic(s0, sv0, sa0, svT, 0, T);
+				Polynomial quartic(s0, sv0, 0, svT, 0, T);
 				double js = 0;
 				// Generate Longitudional Trajectory for a given v and Latitudional Trajectory
 				for(double t=0; t<=T; t=t+0.1){
-					std::vector<double> data= {t, quartic.position(t), quartic.velocity(t), quartic.acceleration(t), quartic.jerk()};
-					js += std::pow(data[4]);
-					if(data[2]>path.maxVelocity)
-						path.maxVelocity = data[2];
-					if(data[3]>path.maxAcceleration)
-						path.maxAcceleration = data[3];
+					std::vector<double> data= {quartic.position(t), quartic.velocity(t), quartic.acceleration(t), quartic.jerk(), t};
+					js += std::pow(data[3],2);
+					if(data[1]>path.maxVelocity)
+						path.maxVelocity = data[1];
+					if(data[2]>path.maxAcceleration)
+						path.maxAcceleration = data[2];
 					longitudionalTrajectory.push_back(data);
 				}
-				path.s.push_back(longitudionalTrajectory);
+				path.s = longitudionalTrajectory;
 				path.js = js;
 
 				trajectoryCost(path);
@@ -97,18 +98,18 @@ bool OptimalTrajectoryPlanner::isColliding(FrenetPath &path, std::vector<std::ve
 	return false;
 }
 
-void OptimalTrajectoryPlanner::isWithinKinematicConstraints(FrenetPath &path){
+bool OptimalTrajectoryPlanner::isWithinKinematicConstraints(FrenetPath &path){
 	if(path.maxVelocity>maxVelocity_ || path.maxAcceleration>maxAcceleration_ || path.maxCurvature>maxCurvature_){
-		return true;
+		return false;
 	}
-	return false;
+	return true;
 }
 
 std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath> &paths){
 	std::vector<FrenetPath> validPaths;
 	for(FrenetPath path:paths){
-		if (!isColliding(path, obstacles) && !isWithinKinematicConstraints(path)){
-			validPaths.push_back(path)
+		if (!isColliding(path, obstacles) && isWithinKinematicConstraints(path)){
+			validPaths.push_back(path);
 		}
 	}
 	return validPaths;
@@ -121,7 +122,7 @@ void OptimalTrajectoryPlanner::convertToWorldFrame(std::vector<FrenetPath> &path
 		for(int i =0 i<path.s.size(); i++){
 			double x, y, yaw;
 			for(int j=distanceTracedIndex_; j<centerLane.size(); j++){
-				if(std::abs(path.s[i][0]-centerLane[j][0])<=0.1){
+				if(std::abs(path.s[i][0]-centerLane[j][4])<=0.1){
 					distanceTracedIndex_ = j;
 					x = centerLane[j][0];
 					y = centerLane[j][1];
@@ -151,8 +152,7 @@ void OptimalTrajectoryPlanner::convertToWorldFrame(std::vector<FrenetPath> &path
 	}
 }
 
-cv::Point2i OptimalTrajectoryPlanner::windowOffset(
-    float x, float y, int image_width=2000, int image_height=2000){
+cv::Point2i OptimalTrajectoryPlanner::windowOffset(float x, float y, int image_width=2000, int image_height=2000){
   cv::Point2i output;
   output.x = int(x * 100) + 300;
   output.y = image_height - int(y * 100) - image_height/3;
@@ -174,11 +174,11 @@ void OptimalTrajectoryPlanner::run(){
 		double y = 4*(sin(std::pow((x*a-b),2) + (x*a-b) + c) + 10);
 		double dy = 4*cos(std::pow((x*a-b),2) + (x*a-b) + c)*(((2*a)*(x*a-b))+a);
 		double ddy = 4((-1*sin(std::pow((x*a-b),2) + (x*a-b) + c)*(std::pow((((2*a)*(x*a-b))+a),2))) +
-				(cos(std::pow((x*a-b),2) + (x*a-b) + c)*(2*a*a)))
+				(cos(std::pow((x*a-b),2) + (x*a-b) + c)*(2*a*a)));
 		
 		double curvature = std::abs(ddy)/std::sqrt(std::pow((1+(dy*dy)),3));
 		double yaw = dy;
-		distanceTraced = std::sqrt(std::pow(x-prevX,2)+std::pow(y-prevY,2));
+		distanceTraced += std::sqrt(std::pow(x-prevX,2)+std::pow(y-prevY,2));
 		centerLane.push_back({x, y, yaw, curvature, distanceTraced});
 		prevX = x;
 		prevY = y;
@@ -199,26 +199,26 @@ void OptimalTrajectoryPlanner::run(){
 	while(std::sqrt(std::pow(centerLane.back()[0]-x,2)+std::pow(centerLane.back()[1]-y,2))<1){
 		
 		// Get optimal Trajectory
-		Frenetpath p = optimalTrajectory(d0, dv0, da0, s0, sv0)
-		d0=p.d.back()[0];
-		dv0=p.d.back()[1];
-		da0=p.d.back()[2];
-		s0=p.s.back()[0];
-		sv0=p.s.back()[1];
-		x = p.world[p.world.size()][0];
-		y = p.world[p.world.size()][1];
+		Frenetpath p = optimalTrajectory(d0, dv0, da0, s0, sv0, centerLane, obstacles);
+		d0 = p.d.back()[0];
+		dv0 = p.d.back()[1];
+		da0 = p.d.back()[2];
+		s0 = p.s.back()[0];
+		sv0 = p.s.back()[1];
+		x = p.world[p.world.size()-1][0];
+		y = p.world[p.world.size()-1][1];
 
 		// visualize
 		cv::Mat lane(2000, 8000, CV_8UC3, cv::Scalar(255, 255, 255));
 		
 		// Lane
-		for(int i{0}; i<centerLane.size(); i++){
+		for(int i{1}; i<centerLane.size(); i++){
 			cv::line(lane, windowOffset(centerLane[i-1][0], centerLane[i-1][1], lane.cols, lane.rows), windowOffset(centerLane[i][0], centerLane[i][1], lane.cols, lane.rows), cv::Scalar(0, 0, 0), 10);
 		}
 
 		// Obstacles
 		for(int i{0}; i<obstacles.size(); i++){
-			cv::circle(lane, windowOffset(obstcles[i][0], obstcles[i][1], lane.cols, lane.rows), 40, cv::Scalar(255, 0, 0), 5);
+			cv::circle(lane, windowOffset(obstacles[i][0], obstacles[i][1], lane.cols, lane.rows), 40, cv::Scalar(255, 0, 0), 5);
 		}
 
 		// Trajectory
@@ -229,7 +229,5 @@ void OptimalTrajectoryPlanner::run(){
 		cv::imshow("Optimal Trajectory Planner", lane);
 		cv::waitKey(0);	
 	}
-
-
 }
 

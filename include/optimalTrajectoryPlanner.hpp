@@ -21,19 +21,22 @@ class OptimalTrajectoryPlanner
 
         bool isColliding();
 
-        FrenetPath optimalPath();
+        FrenetPath optimalTrajectory(double d0, double dv0, double da0,
+                                     double s0, double sv0,
+                                     std::vector<std::vector<double>> &centerLane,
+                                     std::vector<std::vector<double>> &obstacles);
 
         void trajectoryCost(FrenetPath &path);
 
         bool isColliding(FrenetPath &path, std::vector<std::vector<double>> &obstacles);
 
-        void isWithinKinematicConstraints(FrenetPath &path);
+        bool isWithinKinematicConstraints(FrenetPath &path);
 
         std::vector<FrenetPath> isValid(std::vector<FrenetPath> &paths);
 
         void convertToWorldFrame(std::vector<FrenetPath> &paths);
 
-        cv::Point2i windowOffset(float x, float y, int image_width=2000, int image_height=2000)
+        cv::Point2i windowOffset(float x, float y, int image_width=2000, int image_height=2000);
 
         void run();
 
