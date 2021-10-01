@@ -1,8 +1,8 @@
 #include <optimalTrajectoryPlanner.hpp>
 
 OptimalTrajectoryPlanner::OptimalTrajectoryPlanner() {
-	minimumTurningRadius_ = wheelBase_/tan(maxSteeringAngle_)
-	maxCurvature_ = 1/minimumTurningRadius_;
+	// minimumTurningRadius_ = wheelBase_/tan(maxSteeringAngle_)
+	// maxCurvature_ = 1/minimumTurningRadius_;
 }
 
 OptimalTrajectoryPlanner::~OptimalTrajectoryPlanner() {
@@ -151,6 +151,14 @@ void OptimalTrajectoryPlanner::convertToWorldFrame(std::vector<FrenetPath> &path
 	}
 }
 
+cv::Point2i OptimalTrajectoryPlanner::windowOffset(
+    float x, float y, int image_width=2000, int image_height=2000){
+  cv::Point2i output;
+  output.x = int(x * 100) + 300;
+  output.y = image_height - int(y * 100) - image_height/3;
+  return output;
+}
+
 void OptimalTrajectoryPlanner::run(){
 
 	// Center Lane
@@ -176,10 +184,17 @@ void OptimalTrajectoryPlanner::run(){
 		prevY = y;
 	}
 
+	cv::namedWindow("Optimal Trajectory Planner", cv::WINDOW_NORMAL);
+
 	// Obstacles along the lane
 	std::vector<std::vector<double>> obstacles = {{10.58,43}, {10.58,45}, {20,38}, {60,43.93}, {40,42.5}};
-	double d0 = laneWidth_, dv0 = 0, da0=0;
-	double s0 = 0, sv0 = 15;
+	double d0 = laneWidth_; 
+	double dv0 = 0;
+	double da0=0;
+	double s0 = 0;
+	double sv0 = 15;
+	double x=0;
+	double y=0;
 	// Run Trajectory Planner till the end of perceived/available Lane data
 	while(std::sqrt(std::pow(centerLane.back()[0]-x,2)+std::pow(centerLane.back()[1]-y,2))<1){
 		
@@ -190,15 +205,29 @@ void OptimalTrajectoryPlanner::run(){
 		da0=p.d.back()[2];
 		s0=p.s.back()[0];
 		sv0=p.s.back()[1];
-		
+		x = p.world[p.world.size()][0];
+		y = p.world[p.world.size()][1];
+
 		// visualize
+		cv::Mat lane(2000, 8000, CV_8UC3, cv::Scalar(255, 255, 255));
+		
 		// Lane
 		for(int i{0}; i<centerLane.size(); i++){
+			cv::line(lane, windowOffset(centerLane[i-1][0], centerLane[i-1][1], lane.cols, lane.rows), windowOffset(centerLane[i][0], centerLane[i][1], lane.cols, lane.rows), cv::Scalar(0, 0, 0), 10);
 		}
+
 		// Obstacles
 		for(int i{0}; i<obstacles.size(); i++){
+			cv::circle(lane, windowOffset(obstcles[i][0], obstcles[i][1], lane.cols, lane.rows), 40, cv::Scalar(255, 0, 0), 5);
 		}
-		// Robot
+
+		// Trajectory
+		for(int i{0}; i<p.world.size(); i++){
+			cv::circle(lane, windowOffset(p.world[i][0], p.world[i][1], bg.cols, bg.rows),40, cv::Scalar(0, 0, 255), -1);
+		}
+
+		cv::imshow("Optimal Trajectory Planner", lane);
+		cv::waitKey(0);	
 	}
 
 
