@@ -34,6 +34,7 @@ class OptimalTrajectoryPlanner
         double laneWidth;
         double timeStep = 0.1;
         double roadWidth = 10;
+        int KLat, KLon, kj, kt, ks;
 };
 
 #endif  //  INCLUDE_OPTIMALTRAJECTORYPLANNER_HPP_

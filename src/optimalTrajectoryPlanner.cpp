@@ -15,36 +15,63 @@ bool OptimalTrajectoryPlanner::isColliding(){
 std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, double da0,
 												 double s0, double sv0, double sa0,
 												 std::vector<std::vector<double>> &obstacles){
-	// Calculate all possible paths in TNB/Frenet Frame
-	for(double T = minPredictionStep; T<maxPredictionStep; T=T+0.1){
-		FrenetPath path;
-		path.T = T;
+	// To store all possible tranectories in TNB/Frenet Frame
+	std::vector<FrenetPath> paths;
 
-		// Latitudional
+	// Calculate all possible paths in TNB/Frenet Frame
+	// Iterate over different prediction times
+	for(double T = minPredictionStep; T<maxPredictionStep; T=T+0.1){
+
+		// Iterate over different lanes
 		for(double dT = -((noOfLanes-1)*laneWidth)/2; dT<= ((noOfLanes-1)*laneWidth)/2; dT = dT + laneWidth){
 			double dvT = 0 , daT = 0;
-			std::vector<std::vector<double>> trajectory;
+			std::vector<std::vector<double>> latitudionalTrajectory;
 			Polynomial quintic(d0, dv0, da0, dT, dvT, daT, T);
+			double jd = 0;
+			// Generate Latitudional Trajectory for a given T and lane
 			for(double t=0; t<=T; t=t+0.1){
 				std::vector<double> data= {t, quintic.position(t), quintic.velocity(t), quintic.acceleration(t), quintic.jerk()};
-				trajectory.push_back(data);
+				jd += std::pow(data[4]);
+				latitudionalTrajectory.push_back(data);
 			}
-			path.d.push_back(trajectory);
-		}
 
-		// Longitudional (Velocity Keeping)
-		for(){
-			std::vector<std::vector<double>> trajectory;
-			Polynomial quartic(s0, sv0, sa0, svT, 0, T);
-			for(double t=0; t<=T; t=t+0.1){
-				std::vector<double> data= {t, quartic.position(t), quartic.velocity(t), quartic.acceleration(t), quartic.jerk()};
-				trajectory.push_back(data);
+			// Iterate over different end velocities times
+			for(){
+				FrenetPath path;
+				path.T = T;
+				path.d.push_back(latitudionalTrajectory);
+				path.jd = jd;
+				std::vector<std::vector<double>> longitudionalTrajectory;
+				Polynomial quartic(s0, sv0, sa0, svT, 0, T);
+				double js = 0;
+				// Generate Longitudional Trajectory for a given v and Latitudional Trajectory
+				for(double t=0; t<=T; t=t+0.1){
+					std::vector<double> data= {t, quartic.position(t), quartic.velocity(t), quartic.acceleration(t), quartic.jerk()};
+					js += std::pow(data[4]);
+					if(data[2]>path.maxVelocity)
+						path.maxVelocity = data[2];
+					if(data[3]>path.maxAcceleration)
+						path.maxAcceleration = data[3];
+					longitudionalTrajectory.push_back(data);
+				}
+				path.s.push_back(longitudionalTrajectory);
+				path.js = js;
+
+				trajectoryCost(path);
+
+				// store Frenet path
+				paths.push_back(path);
 			}
-			path.s.push_back(trajectory);
 		}
 	}
 
 	return optimalTrajectory;
+}
+
+void OptimalTrajectoryPlanner::trajectoryCost(FrenetPath &path){
+	cd = path.jd*kj + path.T*kt + std::pow(path.d.back()[0], 2)*ks;
+	cv = path.js*kj + path.T*kt + std::pow(path.s.front()[0]-path.s.back()[0],2)*ks;
+	path.cf = kLat*cd + kLon*cv;
 }
 
 void OptimalTrajectoryPlanner::run(){
