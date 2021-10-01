@@ -11,6 +11,8 @@ class Polynomial
 {
     public:
 
+        Polynomial();
+
         Polynomial(double x0, double v0, double a0, double xT, double vT, double aT, double T);
 
         Polynomial(double x0, double v0, double a0, double vT, double aT, double T);
