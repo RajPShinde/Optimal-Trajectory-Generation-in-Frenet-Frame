@@ -10,11 +10,13 @@ class FrenetPath
     public:
         std::vector<std::vector<double>> s;       // Longitudional Data
         std::vector<std::vector<double>> d;       // Latitudional Data
+        std::vector<std::vector<double>> world;
         double T;                                // Prediction Time
         double cf;                        // Cost
         double jd, js;
         double maxVelocity = INT_MIN;
         double maxAcceleration = INT_MIN; 
+        double maxCurvature = INT_MIN; 
 };
 
 #endif  //  INCLUDE_FRENETPATH_HPP_

@@ -6,12 +6,6 @@ OptimalTrajectoryPlanner::OptimalTrajectoryPlanner() {
 OptimalTrajectoryPlanner::~OptimalTrajectoryPlanner() {
 }
 
-bool OptimalTrajectoryPlanner::isColliding(){
-	return false;
-}
-
-
-
 std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(double d0, double dv0, double da0,
 												 double s0, double sv0, double sa0,
 												 std::vector<std::vector<double>> &obstacles){
@@ -20,10 +14,10 @@ std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(dou
 
 	// Calculate all possible paths in TNB/Frenet Frame
 	// Iterate over different prediction times
-	for(double T = minPredictionStep; T<maxPredictionStep; T=T+0.1){
+	for(double T = minPredictionStep_; T<maxPredictionStep_; T=T+0.1){
 
 		// Iterate over different lanes
-		for(double dT = -((noOfLanes-1)*laneWidth)/2; dT<= ((noOfLanes-1)*laneWidth)/2; dT = dT + laneWidth){
+		for(double dT = -((noOfLanes_-1)*laneWidth_)/2; dT<= ((noOfLanes_-1)*laneWidth_)/2; dT = dT + laneWidth_){
 			double dvT = 0 , daT = 0;
 			std::vector<std::vector<double>> latitudionalTrajectory;
 			Polynomial quintic(d0, dv0, da0, dT, dvT, daT, T);
@@ -65,13 +59,39 @@ std::vector<std::vector<double>> OptimalTrajectoryPlanner::optimalTrajectory(dou
 		}
 	}
 
+	// Convert Trajectories from Frenet Frame to Global/World Frame
+	convertToWorldFrame(paths);
+
+
+
 	return optimalTrajectory;
 }
 
 void OptimalTrajectoryPlanner::trajectoryCost(FrenetPath &path){
-	cd = path.jd*kj + path.T*kt + std::pow(path.d.back()[0], 2)*ks;
-	cv = path.js*kj + path.T*kt + std::pow(path.s.front()[0]-path.s.back()[0],2)*ks;
-	path.cf = kLat*cd + kLon*cv;
+	cd = path.jd*kj_ + path.T*kt_ + std::pow(path.d.back()[0], 2)*ks_;
+	cv = path.js*kj_ + path.T*kt_ + std::pow(path.s.front()[0]-path.s.back()[0],2)*ks_;
+	path.cf = kLat_*cd + kLon_*cv;
+}
+
+bool OptimalTrajectoryPlanner::isColliding(FrenetPath &path){
+	return false;
+}
+
+void OptimalTrajectoryPlanner::isWithinKinematicConstraints(FrenetPath &path){
+	if(path.maxVelocity>maxVelocity_ || path.maxAcceleration>maxAcceleration_ || path.maxCurvature>maxCurvature_){
+		return true;
+	}
+	return false;
+}
+
+std::vector<FrenetPath> OptimalTrajectoryPlanner::isValid(std::vector<FrenetPath> paths){
+	std::vector<FrenetPath> validPaths;
+	for(){
+		if (!isColliding(path) && !isWithinKinematicConstraints(path)){
+			validPaths.push_back(path)
+		}
+	}
+	return validPaths;
 }
 
 void OptimalTrajectoryPlanner::run(){
@@ -80,8 +100,17 @@ void OptimalTrajectoryPlanner::run(){
 	std::vector<std::vector<double>> centerLane;
 	for(int x{0}, x<100; x = x + 0.05){
 		// Arbitary function describing a lane
-		y = 4*(sin(std::pow((x*0.05-3.5),2) + (x*0.05-3.5) + 2) + 10);
-		centerLane.push_back({x,y});
+		double a = 0.05;
+		double b = 3.5;
+		double c = 2;
+		double y = 4*(sin(std::pow((x*a-b),2) + (x*a-b) + c) + 10);
+		double dy = 4*cos(std::pow((x*a-b),2) + (x*a-b) + c)*(((2*a)*(x*a-b))+a);
+		double ddy = 4((-1*sin(std::pow((x*a-b),2) + (x*a-b) + c)*(std::pow((((2*a)*(x*a-b))+a),2))) +
+				(cos(std::pow((x*a-b),2) + (x*a-b) + c)*(2*a*a)))
+		
+		double curvature = std::abs(ddy)/std::sqrt(std::pow((1+(dy*dy)),3));
+		double yaw = dy;
+		centerLane.push_back({x, y, yaw, curvature});
 	}
 
 	// Obstacles along the lane

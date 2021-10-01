@@ -24,17 +24,19 @@ class OptimalTrajectoryPlanner
 
     private:
         double pi_ = 3.14159;
-        double maxSpeed;
-        double maxAcceleration;
-        double robotFootprint = 2;
-        double maxSteeringAngle;
-        double maxPredictionStep;
-        double minPredictionStep;
-        double noOfLanes;
-        double laneWidth;
-        double timeStep = 0.1;
-        double roadWidth = 10;
-        int KLat, KLon, kj, kt, ks;
+        double maxVelocity_;
+        double maxAcceleration_;
+        double maxSteeringAngle_;
+        double maxCurvature_;
+        double robotFootprint_ = 2;
+        double maxSteeringAngle_;
+        double maxPredictionStep_;
+        double minPredictionStep_;
+        double noOfLanes_;
+        double laneWidth_;
+        double timeStep_ = 0.1;
+        double roadWidth_ = 10;
+        int KLat_, KLon_, kj_, kt_, ks_;
 };
 
 #endif  //  INCLUDE_OPTIMALTRAJECTORYPLANNER_HPP_
