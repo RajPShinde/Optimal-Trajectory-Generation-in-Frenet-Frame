@@ -1,4 +1,4 @@
-# Optimap-Trajectory-Generation-in-Frenet-Frame
+# Optimal Trajectory Generation in Frenet-Frame
 Optimal Trajectory Generation in Frenet Frame for Motion Planning
 
 ## Dependencies
